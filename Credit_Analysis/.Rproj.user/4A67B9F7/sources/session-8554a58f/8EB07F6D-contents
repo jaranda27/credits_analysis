@@ -1,0 +1,655 @@
+---
+title: "Credit Assignation Analysis."
+author: "Jorge Aranda"
+format:
+  html:
+    code-fold: true
+editor: visual
+---
+
+```{=html}
+<link href='https://fonts.googleapis.com/css?family=Montserrat' rel='stylesheet'>
+<style type="text/css">
+  body{
+  font-family: 'Montserrat';
+  font-size: 19px;
+}
+</style>
+```
+```{=html}
+<style>
+body {
+text-align: justify}
+</style>
+```
+
+------------------------------------------------------------------------
+
+## Validating Dataset
+
+The **credits.txt** data-set contains 81,536 personal and financial records from people and companies a very important national bank has granted a credit amount in Colombia during 2019. Since data utilized here belong to quite sensitive information from clients, any ID information has been removed. In this project, we aim to analyze the customer's income distribution as well as create, evaluate and optimize a ML model to predict the amount of the credit assigned to a customer based on several variables.
+
+```{r setup, loading libraries, import .txt file and set typography, include=T, message=F, warning=F}
+
+#import libraries
+library(tidyverse)
+library(showtext)
+library(naniar)
+library(ggdist)
+library(FactoMineR)
+library(factoextra)
+library(NbClust)
+library(pls)
+library(mice)
+library(glmnet)
+library(ggcorrplot)
+library(Metrics)
+library(cowplot)
+library(knitr)
+
+#load dataset
+urlfile <- "https://raw.githubusercontent.com/jaranda27/credits_analysis/main/creditos.txt"
+credits <- read_delim(url(urlfile))
+
+#import fonts 
+font_add_google("Montserrat",'Thin 100')
+showtext_auto()
+
+```
+
+When a bank or financial institution evaluates an individual's creditworthiness and determines the credit amount they are eligible for, they typically take into account various financial and personal information. The specific criteria and weight given to each factor may vary among institutions, but some of the factors considered include **credit history**, **stability of income**, **existing debt**, **credits card balances**, **education**, **social class**, **number of credits inquires**, **payment history** and more, it depends on which variables a bank would prioritize. For this purpose, we'll validate the data-set after selecting the variables that best represent most of the factors to be taken into account for eligibility.
+
+```{r setup, validating dataset,fig.dim= c(7,6), echo=T,message=FALSE, warning=F }
+
+#create the new dataset
+vars = c('AAAAMM_SOL','ESTRATOS','PRODS_SOLIC','NUM_DE_PERSONAS_A_CARGO','PORC_ENDTOT_CON_NUEVO_CRED',
+              'PORC_DEUDA_SEC_FINANCIERO','ENDEUD_NUEVO_CREDITO')
+cred.filt <- credits %>% select(-vars) 
+
+#visualize missing data
+vis_miss(cred.filt,warn_large_data = F)
+
+```
+
+After filtering, we have 14 variables and 81,536 records with \~11% of missing data, spread within 5 variables: *SCORE ACIERTA, VALOR_CUTAS_CARTABANC, SALDO_ACTUAL_SEC_FINANCIERO, SALDO_TODOS_SECTORES* and *VALOR_CUOTA_TODOS_SECTORES.*
+
+# **Exploratory Analysis**
+
+Before perform a data cleaning, model and make statistical inference on data, we'll describe the information numerically and graphically.
+
+```{r , rel. freq by sex, fig.dim= c(7,6), echo=T,message=FALSE, warning=F}
+
+freq<- table(cred.filt$SEXO)
+rel.freq <- prop.table(freq)
+
+sex_trans <- function(x){
+  dplyr::mutate(.data=x,SEXO = ifelse(
+  SEXO== 'H','Men','Women'))
+}
+df_plt1 <- cred.filt %>% sex_trans() %>% 
+  group_by(SEXO) %>% 
+  summarize(Total=n()) %>% 
+  mutate(fraction=Total/sum(Total),
+         percent=fraction*100,
+         ymax=cumsum(fraction),
+         ymin=c(0,head(ymax,n=-1)),
+         label_pos=(ymax+ymin)/2,
+         label=paste0(SEXO, ": ", round(percent,0), "%")) 
+         
+
+ggplot(df_plt1, aes(ymax=ymax,ymin=ymin,xmax=4,xmin=3,fill=SEXO)) + 
+  geom_rect() + 
+  geom_text(aes(x=1.1,y=label_pos,label=label,color=SEXO),
+             size=12)+
+  coord_polar(theta="y")+   theme_classic(base_size = 22)+
+  scale_fill_manual(values=c("#2B3D5E","#D2DFF7"))+
+  scale_color_manual(values=c("#2B3D5E","#D2DFF7"))+
+  xlim(c(-1,4)) +
+  labs(title="Gender distribution",
+       subtitle="Proportions Male and Female customers") +
+  theme(legend.position = "none",
+        plot.title = element_text(size=32,
+                                  face='bold'),
+        axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.line = element_blank(),
+        axis.ticks = element_blank())
+
+
+```
+
+The donut chart indicates that \~2/3 of the total customers from this dataset are men, and this difference holds up for most of the educational levels the population is grouped by.
+
+```{r , rel. freq by sex and academic level,fig.dim= c(7,6), echo=T,message=FALSE, warning=F}
+
+freq.ed.sx <- table(cred.filt$NIVEL_ESTUDIOS,cred.filt$SEXO)
+p.table<- prop.table(freq.ed.sx,margin = 1)
+props.plt2<- as.data.frame(p.table)
+props.plt2 <- props.plt2 %>% rename(SEXO=Var2) %>%
+  sex_trans()
+props.plt2$label<-round(props.plt2$Freq*100,1)
+
+ggplot(props.plt2,aes(factor(Var1,levels=c('BAS','MED','TEC',
+                                         'PRF','NOG','UNV',
+                                         'POS','DOC')),Freq,
+                      fill=SEXO)) + geom_col(width=0.8) +
+  geom_text(aes(x=Var1,y=ifelse(SEXO=='Women',
+                                 Freq/2,
+                                 1-Freq/2),
+            label=paste0(props.plt2$label,'%')),size=6)+
+  scale_fill_manual(values = c("#2B3D5E","#D2DFF7")) +
+  theme_classic(base_size = 15) + 
+  scale_y_continuous(expand = expansion(c(0, 0))) +
+  labs(title = 'Education level per sex',
+       x='Education level',
+       y='Percentage (%)',
+       color='Gender') +
+  theme(text= element_text(family='Thin 100'),
+        axis.title.y = element_blank(),
+        axis.line.y = element_blank(),
+        axis.text.x = element_text(size=18),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank(),
+        plot.title = element_text(size=32,
+                                  face='bold'),
+        legend.title = element_blank())
+
+```
+
+When analyzing distributions of income per sex, we have to take into account the multiple outliers that translate into a severe right skewed distribution, for this reason, data will be analyzed in a log10 scale, that will approximate data to a normal distribution.
+
+```{r, distribution of income per sex, fig.dim= c(7,6), echo=T,message=FALSE, warning=F }
+cred.filt %>% sex_trans() %>% ggplot(aes(SEXO,log(INGRESOS_DECLARADOS_TOTA,base=10))) + 
+         ggdist::stat_halfeye(alpha=0.5,justification=-0.04) + 
+  geom_boxplot(width=0.1,
+               alpha=0.2,
+               outlier.color = 'red') + 
+  geom_hline(yintercept = c(6.1,6.4),
+             linetype="dashed",
+             alpha=0.3,
+             color='red') + 
+  theme_classic(base_size = 15) + 
+  scale_y_continuous(expand = expansion(c(0, 0))) +
+  labs(title = 'Distribution of income per sex',
+       x='Gender',
+       y='Log10(Income)') +
+  theme(text= element_text(family='Thin 100'),
+        axis.text.x = element_text(size=18),
+        plot.title = element_text(size=32,
+                                  face='bold'),
+        axis.title = element_text(size=22),
+        legend.title = element_blank())
+
+```
+
+75% of the customers here registered incomes under \~ COP \$ 10 millions, while the most common wages range from COP \$1.2M to 2.5M for both genders. There are also some extraordinary income figures over COP \$ 100M.
+
+According to the Chi-square test, there seems to be a significant dependence ((alpha) = 0.05) between the social class and the academic level. Which indicates that education has a relevant impact on the economic status of a person. Note that *p-value* was calculated using montecarlo simulations without a prior normal distribution assumption ([see the repository for more info](https://stackoverflow.com/questions/52068531/how-work-the-p-value-simulation-in-the-chisq-test-and-fisher-test)).
+
+```{r , Chisq.test, echo=T,message=FALSE, warning=F }
+
+cont_table<-table(cred.filt$ESTRATO,cred.filt$NIVEL_ESTUDIOS)
+cont_matrix <- matrix(c(cont_table),
+                      nrow = 7,byrow =F,
+                      dimnames = list(c("0","1","2","3",
+                                        "4","5","6"),
+                                      c(levels(
+                                        as.factor(
+                                          cred.filt$NIVEL_ESTUDIOS))
+                                        )
+                                      )
+                      )
+chisq<-  chisq.test(cont_matrix,simulate.p.value = T,B=10000)
+chisq
+
+```
+
+The graph below shows the proportion of men and women in every academic level based on the total amount of customers by gender. Additionally, a proportion test were carried out for each level of education, where significant differences (***p*** **\< 0.05**) between the proportion of men an women represented in all groups except for unfinished bachelor and post-graduate levels.
+
+```{r, prop test for education level, fig.dim= c(7,6), echo=T,message=FALSE, warning=F }
+
+ed.by.sex<- cred.filt %>% sex_trans()%>% 
+  group_by(SEXO,NIVEL_ESTUDIOS) %>% summarise(total=n()) %>%
+  mutate(tot_sex=sum(total),perc=total/tot_sex) 
+
+ggplot(ed.by.sex,aes(factor(NIVEL_ESTUDIOS,
+                    levels=c('BAS','MED','TEC',
+                             'PRF','NOG','UNV',
+                             'POS','DOC')),perc,fill=SEXO)) +
+  geom_col(position = 'dodge',width=0.6) +  
+  scale_fill_manual(values = c("#2B3D5E","#D2DFF7")) +
+  theme_classic(base_size = 15) + 
+  scale_y_continuous(expand = expansion(c(0, 0))) +
+  labs(title = 'Proportion to the total number of customers by gender',
+       x='Education level',
+       y='Proportion',
+       color='Gender') +
+  theme(text= element_text(family='Thin 100'),
+        axis.title.x = element_text(size=22),
+        axis.text = element_text(size=18),
+        plot.title = element_text(size=32,
+                                  face='bold'),
+        legend.title = element_blank(),
+        legend.text = element_text(size=18))
+
+#find significant differences between proportions
+
+total_sex <- c(50177,31359)
+ed_level <- table(cred.filt$SEXO,cred.filt$NIVEL_ESTUDIOS)
+ed_lev_list <-list()
+test <-list()
+df_prop <- data.frame()
+col.names<-levels(as.factor(cred.filt$NIVEL_ESTUDIOS))
+for (i in 1:ncol(ed_level)) {
+  ed_lev_list[[i]]<-ed_level[,i]
+  test[[i]] <-prop.test(c(ed_lev_list[[i]][1],
+                          ed_lev_list[[i]][2]),
+                        total_sex)
+  prop_test_df <- data.frame(level=col.names[i],
+                             p_value=test[[i]]$p.value)
+  df_prop <- rbind(df_prop,prop_test_df)
+}
+df_prop
+
+```
+
+In order to compare the average income between genders, we have to address the lack of normality and homogenity of variance in the original data. The graph below shows the spread of income for men a women , a severely right skewed distribution is observed with multiple outliers.
+
+```{r, difference between total income per gender, fig.dim= c(7,6), echo=T,message=FALSE, warning=F}
+
+cred.filt %>% sex_trans() %>% 
+  ggplot(aes(y=INGRESOS_DECLARADOS_TOTA,col=SEXO)) +
+  geom_boxplot() +  
+  scale_color_manual(values = c("#2B3D5E","#D2DFF7")) +
+  theme_classic(base_size = 15) + 
+  scale_y_continuous(expand = expansion(c(0, 0))) +
+  labs(title = 'Income distribution by sex',
+       x='Sex',
+       y='Income',
+       color='Gender') +
+  theme(text= element_text(family='Thin 100'),
+        axis.title.x = element_text(size=22),
+        axis.text = element_text(size=18),
+        plot.title = element_text(size=32,
+                                  face='bold'),
+        legend.title = element_blank(),
+        legend.text = element_text(size=18))
+```
+
+By performing a log10 transformation, we can approximate a normal distribution and homosedasticity in data, which is confirmed in the graphs below.
+
+```{r , income comparission bewteen genders, fig.dim= c(7,6), echo=T,message=FALSE, warning=F}
+
+log.income <- cred.filt %>% 
+  mutate(log_income= log(INGRESOS_DECLARADOS_TOTA,base=10))
+men_income<- log.income %>% filter(SEXO=='H') %>% pull(log_income)
+women_income <- log.income %>% filter(SEXO=='M') %>% pull(log_income)
+model_sd<- lm(log_income~SEXO,data = log.income) #adjust a model to verify assumptions 
+par(mfrow=c(2,1))
+plot(model_sd,2,cex.lab=1.5,cex.axis=1.2,cex.main=1.7,cex.sub=1.5)
+plot(model_sd,3,cex.lab=1.5,cex.axis=1.2,cex.main=1.7,cex.sub=1.5)
+
+```
+
+Now we can compare the average income using a student t-test. However, it is important to highlight that values compared are log10 transformed data, hence, the mean values we are comparing correspond to the geometric means for both gender.
+
+```{r , t-test income comparission, echo=T,message=FALSE, warning=F}
+
+t.test(men_income,women_income)
+
+```
+
+According to the t-test, there is a significant difference between the average income for men an women, with men earning around COP \$ 5.1M compared to women with \~ \$ 3.7M on average, which suggest an existing salary gap between both genders. However, the reasons for this to happen can be multiple an can't just be attributed to gender issues or segregation, however, there's not enough information in the data set to infer about those reasons.
+
+# Principal Component Analysis (PCA)
+
+To perform a dimensional reduction using PCA, a data cleaning and transformation is needed. First, we will remove categorical variables like sex, housing, academic level and social class. To address missing data and zeros making no sense in multiple columns multiple imputation with stochastic linear regression was performed using mice package to preserve the relationship between variables.
+
+Since PCA does no rely on the normality assumption from data, we should be able to perform the analysis with the original values. However, it's a good practice to reduce the weight of outliers, which is why log and sqrt transformation were applied to the variables selected.
+
+```{r, PCA data preparation, fig.dim= c(6,5), echo=T ,message=FALSE, warning=F}
+
+pca_creds<- cred.filt %>% select(-c('SEXO','TIPO_VIVI','ESTRATO'))
+pca_creds[pca_creds==0] <- NA
+pca_creds<- pca_creds %>% mutate(MONTO_TOTAL_OTORGADO=log(MONTO_TOTAL_OTORGADO,base=10),
+         INGRESOS_DECLARADOS_TOTA=log(INGRESOS_DECLARADOS_TOTA,base=10),
+         EGRESOS_DECLARADOS_TOTAL=log(EGRESOS_DECLARADOS_TOTAL,base=10),
+         EDAD=sqrt(EDAD),
+         VALOR_CUOTAS_CARTBANC=log(VALOR_CUOTAS_CARTBANC,base=10),
+         SALDO_ACTUAL_SEC_FINANCIERO=log(SALDO_ACTUAL_SEC_FINANCIERO,base=10),
+         SALDO_TODOS_SECTORES=log(SALDO_TODOS_SECTORES,base=10),
+         VALOR_CUOTA_TODOS_SECTORES =log(VALOR_CUOTA_TODOS_SECTORES,base=10),
+         CUOTA_NUEVO_CREDITO=log(CUOTA_NUEVO_CREDITO,base=10)) 
+
+#remove  175 outliers left 
+
+box <- boxplot(pca_creds$MONTO_TOTAL_OTORGADO)
+outlier <- min(box$out)
+pca_creds <- pca_creds %>% filter(MONTO_TOTAL_OTORGADO < outlier)
+
+
+```
+
+Perform multiple imputation with mice package
+
+```{r, multiple imputation, echo=T , results= "hide" ,message=FALSE, warning=F}
+#multiple imputation
+imp <- mice(pca_creds, method = "norm.nob", m = 3) # Impute data
+data_sto <- complete(imp) 
+
+```
+
+After data preparation, we proceed to perform the PCA:
+
+```{r , PCA and scree plot, fig.dim= c(7,6), echo=T ,message=FALSE, warning=F}
+
+data_sto_pca<- data_sto %>% select(-c(NIVEL_ESTUDIOS,MONTO_TOTAL_OTORGADO))
+res.pca <- PCA(data_sto_pca,graph = F)  #mean imputation was used to replace NA values
+eigen_val <- get_eigenvalue(res.pca)
+kable(round(eigen_val,3))
+fviz_eig(res.pca,addlabels = T) + 
+   theme(text= element_text(family='Thin 100'),
+        axis.title = element_text(size=22),
+        axis.text = element_text(size=18),
+        plot.title = element_text(size=32,
+                                  face='bold'),
+        legend.title = element_blank(),
+        legend.text = element_text(size=18))
+
+
+```
+
+The scree plot shows the eigenvalues in descent order. We can see that 90% of the total information in data is encompassed in the first 5 components.
+
+# Biplot of the attributes.
+
+We want to check how the variables correlate each other, which is not only useful for PCA but for building the prediction model we will use later on.
+
+```{r, correlation matrix and Biplot, fig.dim= c(7,6), echo=T ,message=FALSE, warning=F}
+
+data_cor <- data_sto %>% select(-NIVEL_ESTUDIOS)
+
+## verify correlations
+
+multico<- cor(data_cor,method = 'pearson')
+ggcorrplot(multico, method='square',type='upper') + 
+  theme_minimal(base_size = 18)+
+  theme(axis.text.x = element_text(angle = 45,
+                                   vjust=1,
+                                   hjust=1),
+        axis.title = element_blank())
+
+
+#draw biplot
+fviz_pca_var(res.pca, col.var ="black",
+             repel = TRUE) +
+  theme_minimal(base_size = 18) 
+```
+
+All of the variables are positively correlated, which is evidenced in the color of each variable in the correlation matrix. Additionally, here are a couple of main pieces of information that can be extracted from the biplot:
+
+-   Since all of the variables are placed on the same hemisphere of the two-dimensional plane, it confirms that they´re all positively related as stated before.
+
+-   The variables representing fees paid for banking credits or services along with other sectors as well as incomes and monthly debts are better represented by the two first PC in comparison to variables like age and credit score.
+
+-   The 1st component, which accounts for half of the total variance in data by these previously mentioned variables, which indicates that any outcome like the total amount given to a person in credit will be affected by the
+
+# Contribution of each variable.
+
+Loading scores represent the coefficients of the linear combination used to create every PC and define their relationship. We can see that half of the total variance in data is explained by the first component, making it the most relevant, in which income and fees paid for banking credits or services along with other sectors have a stronger impact. This suggests that features related to banking fees and acquisitive capacity have the most impact at influencing the variance in the data set and are very likely to have a strong correlation with the total amount a customer is assigned in credit
+
+```{r, loading scores}
+
+var <- get_pca_var(res.pca)
+load_scores<-sweep(res.pca$var$coord,2,sqrt(res.pca$eig[1:ncol(var$coord),1]),FUN="/")
+kable(round(load_scores,3))
+
+```
+
+Additionally, upon observing the Cos2 plot, we can even confirm that, those features have the biggest contributions to the first 2 principal components, that account for \~ 65% of the total variation.
+
+```{r, Cos2 plot, fig.dim= c(7,6), echo=T ,message=FALSE, warning=F}
+fviz_cos2(res.pca,choice = 'var',axes = 1:2)
+```
+
+In conclusion, after PCA, we achieved a dimensional reduction by expressing more than 92% of the total variance with just components that encompass the information from the 9 features we had selected at the beginning. We also discovered that features representing banking fees and acquisitive capacity have a major impact in variance of data and may have crucial role at determining the amount that a customer can be assigned in credit .
+
+Furthermore, we'll used the reduced information to perform a principal component regression (PCR) to train a Machine Learning model that predicts the amount that will be assigned to a customer. The model will be then compared to other to assess effectiveness.
+
+# Predicting the amount of credit to be assigned
+
+In order to predict a feasible amount of credit assigned to a customer based on his banking record and purchasing power, a multiple regression model will be fitted.
+
+```{r}
+#prepare data
+
+data_mult<-data_sto %>% rename(monto_otorgado=MONTO_TOTAL_OTORGADO)
+data_cor <- data_sto %>% select(-NIVEL_ESTUDIOS)
+
+#Splitting data set 
+size <- ceiling(0.8*nrow(data_mult))
+df.train<- data_mult[1:size,]
+df.test<- data_mult[(size+1):nrow(data_mult),]
+
+# fit model 
+model_mul <- lm(monto_otorgado~.,data=df.train)
+summary(model_mul)
+```
+
+From the summary statistics, we can already see there are some variables that might not have a significant effect according to the p-value, which is actually surprising since most of them were mentioned to have a high impact at collecting the variance in data according to PCA. Let's verify some assumptions before going further with the model.
+
+We had previously verified normality and homogeneity of variance, a log10 and square-root transformation was performed to ensure data met those assumptions. Now we check for no multicolinearity. We can either check the previous correlation plot or calculate the variance inflation factor (VIF) that basically measures the strength of correlation between predictor variables in a model. A variable's GVIF score over 5 requires further investigation, whereas scores over 10 are strong evidence of multicolinearity.
+
+```{r, VIF indicator}
+ 
+data_sto<- data_sto %>% rename(monto_otorgado=MONTO_TOTAL_OTORGADO)
+kable(round(car::vif(model_mul),3))
+```
+
+After checking up the scores, we can determine that the variance for some coefficients represented by features like "VALOR_CUOTAS_CARTBANC", "SALDO_TODOS_SECTORES", and "VALOR_CUOTA_TODOS_SECTORES" are being inflated by the multicolinearity and they should be removed.
+
+Let's build the training/testing data sets and build the new model:
+
+```{r, model_2 remove variables and create train/test datasets}
+
+#Training dataset
+data_train_filt <- df.train %>% select(-c(VALOR_CUOTAS_CARTBANC,
+                                         SALDO_TODOS_SECTORES,
+                                         VALOR_CUOTA_TODOS_SECTORES))
+#Testing dataset
+data_test_filt <- df.test %>% select(-c(VALOR_CUOTAS_CARTBANC,
+                                        SALDO_TODOS_SECTORES,
+                                        VALOR_CUOTA_TODOS_SECTORES))
+
+#Fit he new model
+
+model_mul_2 <- lm(monto_otorgado~.,data=data_train_filt)
+summary(model_mul_2)
+
+```
+
+It looks like all of the remaining variables have a significant effect (**p \> 0.05**) on the response variable. However, the r-squared barely changed. At least we have a simpler model where to start.
+
+Let's asses the model accuracy by using the Root Mean Squared Error (RMSE)
+
+```{r, assesing model}
+
+#validate using RMSE
+
+preds <- predict(model_mul_2, newdata = data_test_filt )
+error_train <- rmse(actual= data_test_filt$monto_otorgado, predicted= preds)
+error_train
+```
+
+With a 0.182 RMSE, we can say the model can generalize well, taking into account it's a log10 scale, the prediction might work pretty fine for small credits, however, as it increases the error margin grows bigger. Let's use some regularization techniques to optimize our model.
+
+In order to use L1, L2 and Elastic Net regression, we have to build the design matrix.
+
+```{r, regularization creat test/train sets}
+
+X_train<- model.matrix(monto_otorgado ~.-1,data=data_train_filt)
+X_test <- model.matrix(monto_otorgado ~.-1,data=data_test_filt)
+Y_train <- data_train_filt$monto_otorgado
+Y_test <- data_test_filt$monto_otorgado
+```
+
+Now, let's compare the models fit using the three regularization methods. The best hyperparameter lambda was calculates using the default 10 folds Cross Validation method from the glmnet( ) function.
+
+```{r, L1,L2 and elastic net}
+
+#Regression with 0 > alpha > 1, for lasso = 1, ridge= 0 
+
+list.of.fits <- list()
+
+for (i in 0:10) { 
+  fit.name <- paste0('alpha',i/10)
+  list.of.fits[[fit.name]] <- 
+    cv.glmnet(X_train,Y_train, type.measure = 'mse',
+              alpha=i/10, family='gaussian')
+}
+result<- data.frame()
+for (i in 0:10) { 
+  fit.name<- paste0('alpha',i/10)
+  predicted_train <- predict(list.of.fits[[fit.name]],
+                             s=list.of.fits[[fit.name]]$lambda.min,
+                             newx = X_train)
+  predicted_test <- predict(list.of.fits[[fit.name]],
+                       s=list.of.fits[[fit.name]]$lambda.min,
+                       newx = X_test)
+  rmse_train<- rmse(actual=Y_train,predicted = predicted_train)
+  rmse_test<- rmse(actual=Y_test,predicted = predicted_test)
+  temp<- data.frame(alpha=i/10, rmse_train=rmse_train, rmse_test=rmse_test, 
+                    lambda=list.of.fits[[fit.name]]$lambda.min, fit.name=fit.name)
+  result<- rbind(result,temp)
+}
+kable(result)
+```
+
+After the hyperparameter tunning, we can see that an alpha= 0.3 and restriction parameter lambda= 0.0030, were the values that worked the best for the elastic net regression parameters.
+
+Let´s now suppose that we doubt the homosedasticity in data, so we'll perform weighted regression by giving a different level of reliability to each point based on their variance. The weights used for the regression model are normally determined base on the inverse of the residuals. We'll start from the previous model generated using elastic net regression:
+
+```{r, Weighted linear regression}
+
+#weighted linear regression with elasctic net 
+elast_net<- cv.glmnet(X_train,Y_train, type.measure = 'mse',
+                       alpha=0.3, family='gaussian')
+
+y_hat<- predict(elast_net, s= elast_net$lambda.min, newx = X_train)
+rmse(actual=Y_train,predicted = y_hat)
+wt1<- 1/y_hat
+
+#weighted linear regression with elasctic net and wt = 1/y_hat
+wt_elast_net1 <- cv.glmnet(X_train,Y_train, type.measure = 'mse', weights = wt1,
+                           alpha=0.3, family='gaussian') 
+y_hat.2 <- predict(wt_elast_net1, s= wt_elast_net1$lambda.1se, newx = X_train)
+resid.y_hat.2 <- abs(Y_train-y_hat.2)
+rmse(actual=Y_train,predicted = y_hat.2)
+fit2 <- lm(resid.y_hat.2~X_train)
+wt2<- 1/fit2$fitted.values^2
+
+
+#weighted linear regression with elastic net and wt = 1/y_hat^2
+wt_elast_net2 <- cv.glmnet(X_train,Y_train, type.measure = 'mse', weights = wt2,
+                           alpha=0.3, family='gaussian') 
+y_hat.3 <- predict(wt_elast_net2, s= wt_elast_net2$lambda.min, newx = X_train)
+rmse(actual=Y_train,predicted = y_hat.3)
+resid.y_hat.3 <- abs(Y_train-y_hat.3)^2
+fit3 <- lm(resid.y_hat.3~X_train)
+wt3<- abs(1/fit3$fitted.values)
+
+#weighted linear regression with elastic net with abs(sigma)^2 and wt = 1/y_hat
+
+wt_elast_net3 <- cv.glmnet(X_train,Y_train, type.measure = 'mse', weights = wt3,
+                           alpha=0.3, family='gaussian') 
+y_hat.4 <- predict(wt_elast_net3, s= wt_elast_net3$lambda.min, newx = X_train)
+rmse(actual=Y_train,predicted = y_hat.4)
+test_pred<- predict(wt_elast_net3, s= wt_elast_net3$lambda.min, newx = X_test)
+rmse(actual=Y_test,predicted = test_pred)
+
+```
+
+After performing a weighted regression, it's still evident that the model fitted using eslastic net regularization for alpha= 0.3 remains the most accurate based on the RMSE score.
+
+Now, we'll try out a Principal Component Regression (PCR) using the dimensionally reduced data set we obtained after performing PCA.
+
+# Principal Component Regression
+
+Since there' will still be a portion of the variance that will not be covered by the components selected to fit model, we can expect the model to be less accurate. However, bear in mind that some of the variables selected at the beginning were not retired for PCR in comparison to the linear models fitter previously, thus, if we manage to obtain a very similar accuracy compared to the elastic net regularized model, we might even consider using the PCR as the computational memory needed will be significantly less.
+
+```{r , PCR}
+
+#retire the cateogrical variables 
+data_pcr <- data_mult %>% select(-NIVEL_ESTUDIOS)
+
+# split the dataset 
+df.train.pcr<- data_pcr[1:size,]
+df.test.pcr<- data_pcr[(size+1):nrow(data_mult),]
+
+#we'll fit the model using 5 components, that emcompass ~92% of the total variance in data
+
+model_pcr<- pcr(monto_otorgado ~ ., data=df.train.pcr, center=T, scale=T, ncomp=5)
+summary(model_pcr)
+
+```
+
+Using cross validation for hyperparameter tunnning will helps us find the best number of component to fit a good model:
+
+```{r, PCR using CV for hyperparameter tunning}
+
+model_pcr_cv<- pcr(monto_otorgado ~ ., data=df.train.pcr, center=T, scale=T, validation='CV')
+model_pcr_mse<- MSEP(model_pcr_cv, estimate = 'CV')
+kable(model_pcr_mse)
+```
+
+After checking the mean square error (MSE), we can see that after the seventh component, the values remains basically unchanged.
+
+```{r, fit PCR with seven components}
+
+pcr_pred<- predict(model_pcr_cv,df.test.pcr,ncomp = 7)
+rsme_pcr_test<- rmse(actual = df.test.pcr$monto_otorgado, predicted = as.numeric(pcr_pred))
+rsme_pcr_test
+```
+
+# Conclusion
+
+After fitting several linear models, using, dimensional reduction and regularization techniques, we have found out that the most accurate model corresponds to the `elast_net` (alpha=0.3) regression with a RMSE value of 0.1819, which is confirmed to generalize well enough.
+
+# Predicting new values
+
+Let's write a function that allow us to pre-processing data and use the model to predict the credit assigned to an specific customer.
+
+```{r, using the model for predictions }
+
+##function for predictions
+
+data.process <- function(x) {
+  df.pred <- data.frame()
+  temp.2 <- rbind(df.pred,x) %>% mutate(INGRESOS_DECLARADOS_TOTA=log(as.numeric(x[,1]),base=10),
+                                        EGRESOS_DECLARADOS_TOTAL=log(as.numeric(x[,2]),base=10),
+                                        EDAD=sqrt(x[,3]),
+                                        NIVEL_ESTUDIOS=factor(x[,4],levels=c('BAS','MED','TEC',
+                                                                             'PRF','NOG','UNV',
+                                                                             'POS','DOC')),
+                                        SCORE_ACIERTA= log(as.numeric(x[,5]),base=10),
+                                        SALDO_ACTUAL_SEC_FINANCIERO=log(as.numeric(x[,6]),base=10),
+                                        CUOTA_NUEVO_CREDITO= log(as.numeric(x[,7]),base=10))
+  design.matrix<- model.matrix(~.-1,data=temp.2)
+  preds<- predict(elast_net, s=elast_net$lambda.min, newx =design.matrix)
+  temp.2$monto.otorgado= 10^preds
+  temp.2
+}
+
+# Feed new data
+
+data<- data.frame(INGRESOS_DECLARADOS_TOTA=6541000,
+                EGRESOS_DECLARADOS_TOTAL=850000,
+                EDAD=26,
+                NIVEL_ESTUDIOS='POS', 
+                SCORE_ACIERTA=830,
+                SALDO_ACTUAL_SEC_FINANCIERO=71500000, 
+                CUOTA_NUEVO_CREDITO=1000000)
+
+kable(data.process(data))
+
+```

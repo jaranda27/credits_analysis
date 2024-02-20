@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Jorge Aranda">
+
+<title>Credit Assignation Analysis.</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Credits Assignation Analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Credits Assignation Analysis_files/libs/quarto-html/quarto.js"></script>
+<script src="Credits Assignation Analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="Credits Assignation Analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Credits Assignation Analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Credits Assignation Analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Credits Assignation Analysis_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Credits Assignation Analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Credits Assignation Analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Credits Assignation Analysis_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Credit Assignation Analysis.</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Jorge Aranda </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+<style type="text/css">
+  body{
+  font-family: 'Montserrat';
+  font-size: 19px;
+}
+</style>
+<style>
+body {
+text-align: justify}
+</style>
+<hr>
+<section id="validating-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="validating-dataset">Validating Dataset</h2>
+<p>The <strong>credits.txt</strong> data-set contains 81,536 personal and financial records from people and companies a very important national bank has granted a credit amount in Colombia during 2019. Since data utilized here belong to quite sensitive information from clients, any ID information has been removed. In this project, we aim to analyze the customer’s income distribution as well as create, evaluate and optimize a ML model to predict the amount of the credit assigned to a customer based on several variables.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#import libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(showtext)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(naniar)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggdist)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(FactoMineR)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(factoextra)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(NbClust)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(pls)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mice)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet)</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggcorrplot)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Metrics)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(cowplot)</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">#load dataset</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>urlfile <span class="ot">&lt;-</span> <span class="st">"https://raw.githubusercontent.com/jaranda27/credits_analysis/main/creditos.txt"</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>credits <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(<span class="fu">url</span>(urlfile))</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">#import fonts </span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="fu">font_add_google</span>(<span class="st">"Montserrat"</span>,<span class="st">'Thin 100'</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a><span class="fu">showtext_auto</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>When a bank or financial institution evaluates an individual’s creditworthiness and determines the credit amount they are eligible for, they typically take into account various financial and personal information. The specific criteria and weight given to each factor may vary among institutions, but some of the factors considered include <strong>credit history</strong>, <strong>stability of income</strong>, <strong>existing debt</strong>, <strong>credits card balances</strong>, <strong>education</strong>, <strong>social class</strong>, <strong>number of credits inquires</strong>, <strong>payment history</strong> and more, it depends on which variables a bank would prioritize. For this purpose, we’ll validate the data-set after selecting the variables that best represent most of the factors to be taken into account for eligibility.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#create the new dataset</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>vars <span class="ot">=</span> <span class="fu">c</span>(<span class="st">'AAAAMM_SOL'</span>,<span class="st">'ESTRATOS'</span>,<span class="st">'PRODS_SOLIC'</span>,<span class="st">'NUM_DE_PERSONAS_A_CARGO'</span>,<span class="st">'PORC_ENDTOT_CON_NUEVO_CRED'</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>              <span class="st">'PORC_DEUDA_SEC_FINANCIERO'</span>,<span class="st">'ENDEUD_NUEVO_CREDITO'</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>cred.filt <span class="ot">&lt;-</span> credits <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>vars) </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">#visualize missing data</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">vis_miss</span>(cred.filt,<span class="at">warn_large_data =</span> F)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/setup,%20validating%20dataset-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>After filtering, we have 14 variables and 81,536 records with ~11% of missing data, spread within 5 variables: <em>SCORE ACIERTA, VALOR_CUTAS_CARTABANC, SALDO_ACTUAL_SEC_FINANCIERO, SALDO_TODOS_SECTORES</em> and <em>VALOR_CUOTA_TODOS_SECTORES.</em></p>
+</section>
+<section id="exploratory-analysis" class="level1">
+<h1><strong>Exploratory Analysis</strong></h1>
+<p>Before perform a data cleaning, model and make statistical inference on data, we’ll describe the information numerically and graphically.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>freq<span class="ot">&lt;-</span> <span class="fu">table</span>(cred.filt<span class="sc">$</span>SEXO)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>rel.freq <span class="ot">&lt;-</span> <span class="fu">prop.table</span>(freq)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>sex_trans <span class="ot">&lt;-</span> <span class="cf">function</span>(x){</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">.data=</span>x,<span class="at">SEXO =</span> <span class="fu">ifelse</span>(</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  SEXO<span class="sc">==</span> <span class="st">'H'</span>,<span class="st">'Men'</span>,<span class="st">'Women'</span>))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>df_plt1 <span class="ot">&lt;-</span> cred.filt <span class="sc">%&gt;%</span> <span class="fu">sex_trans</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(SEXO) <span class="sc">%&gt;%</span> </span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">Total=</span><span class="fu">n</span>()) <span class="sc">%&gt;%</span> </span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">fraction=</span>Total<span class="sc">/</span><span class="fu">sum</span>(Total),</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>         <span class="at">percent=</span>fraction<span class="sc">*</span><span class="dv">100</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>         <span class="at">ymax=</span><span class="fu">cumsum</span>(fraction),</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>         <span class="at">ymin=</span><span class="fu">c</span>(<span class="dv">0</span>,<span class="fu">head</span>(ymax,<span class="at">n=</span><span class="sc">-</span><span class="dv">1</span>)),</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>         <span class="at">label_pos=</span>(ymax<span class="sc">+</span>ymin)<span class="sc">/</span><span class="dv">2</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>         <span class="at">label=</span><span class="fu">paste0</span>(SEXO, <span class="st">": "</span>, <span class="fu">round</span>(percent,<span class="dv">0</span>), <span class="st">"%"</span>)) </span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>         </span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df_plt1, <span class="fu">aes</span>(<span class="at">ymax=</span>ymax,<span class="at">ymin=</span>ymin,<span class="at">xmax=</span><span class="dv">4</span>,<span class="at">xmin=</span><span class="dv">3</span>,<span class="at">fill=</span>SEXO)) <span class="sc">+</span> </span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_rect</span>() <span class="sc">+</span> </span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">x=</span><span class="fl">1.1</span>,<span class="at">y=</span>label_pos,<span class="at">label=</span>label,<span class="at">color=</span>SEXO),</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>             <span class="at">size=</span><span class="dv">12</span>)<span class="sc">+</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_polar</span>(<span class="at">theta=</span><span class="st">"y"</span>)<span class="sc">+</span>   <span class="fu">theme_classic</span>(<span class="at">base_size =</span> <span class="dv">22</span>)<span class="sc">+</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values=</span><span class="fu">c</span>(<span class="st">"#2B3D5E"</span>,<span class="st">"#D2DFF7"</span>))<span class="sc">+</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values=</span><span class="fu">c</span>(<span class="st">"#2B3D5E"</span>,<span class="st">"#D2DFF7"</span>))<span class="sc">+</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlim</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>,<span class="dv">4</span>)) <span class="sc">+</span></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title=</span><span class="st">"Gender distribution"</span>,</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle=</span><span class="st">"Proportions Male and Female customers"</span>) <span class="sc">+</span></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>,</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">32</span>,</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">face=</span><span class="st">'bold'</span>),</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.title =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.line =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.ticks =</span> <span class="fu">element_blank</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/rel.%20freq%20by%20sex-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The donut chart indicates that ~2/3 of the total customers from this dataset are men, and this difference holds up for most of the educational levels the population is grouped by.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>freq.ed.sx <span class="ot">&lt;-</span> <span class="fu">table</span>(cred.filt<span class="sc">$</span>NIVEL_ESTUDIOS,cred.filt<span class="sc">$</span>SEXO)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>p.table<span class="ot">&lt;-</span> <span class="fu">prop.table</span>(freq.ed.sx,<span class="at">margin =</span> <span class="dv">1</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>props.plt2<span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(p.table)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>props.plt2 <span class="ot">&lt;-</span> props.plt2 <span class="sc">%&gt;%</span> <span class="fu">rename</span>(<span class="at">SEXO=</span>Var2) <span class="sc">%&gt;%</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sex_trans</span>()</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>props.plt2<span class="sc">$</span>label<span class="ot">&lt;-</span><span class="fu">round</span>(props.plt2<span class="sc">$</span>Freq<span class="sc">*</span><span class="dv">100</span>,<span class="dv">1</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(props.plt2,<span class="fu">aes</span>(<span class="fu">factor</span>(Var1,<span class="at">levels=</span><span class="fu">c</span>(<span class="st">'BAS'</span>,<span class="st">'MED'</span>,<span class="st">'TEC'</span>,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>                                         <span class="st">'PRF'</span>,<span class="st">'NOG'</span>,<span class="st">'UNV'</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>                                         <span class="st">'POS'</span>,<span class="st">'DOC'</span>)),Freq,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>                      <span class="at">fill=</span>SEXO)) <span class="sc">+</span> <span class="fu">geom_col</span>(<span class="at">width=</span><span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">x=</span>Var1,<span class="at">y=</span><span class="fu">ifelse</span>(SEXO<span class="sc">==</span><span class="st">'Women'</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>                                 Freq<span class="sc">/</span><span class="dv">2</span>,</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                                 <span class="dv">1</span><span class="sc">-</span>Freq<span class="sc">/</span><span class="dv">2</span>),</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>            <span class="at">label=</span><span class="fu">paste0</span>(props.plt2<span class="sc">$</span>label,<span class="st">'%'</span>)),<span class="at">size=</span><span class="dv">6</span>)<span class="sc">+</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"#2B3D5E"</span>,<span class="st">"#D2DFF7"</span>)) <span class="sc">+</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>(<span class="at">base_size =</span> <span class="dv">15</span>) <span class="sc">+</span> </span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>))) <span class="sc">+</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">'Education level per sex'</span>,</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">x=</span><span class="st">'Education level'</span>,</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>       <span class="at">y=</span><span class="st">'Percentage (%)'</span>,</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>       <span class="at">color=</span><span class="st">'Gender'</span>) <span class="sc">+</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">text=</span> <span class="fu">element_text</span>(<span class="at">family=</span><span class="st">'Thin 100'</span>),</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.title.y =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.line.y =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>),</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text.y =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.ticks =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">32</span>,</span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">face=</span><span class="st">'bold'</span>),</span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.title =</span> <span class="fu">element_blank</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/rel.%20freq%20by%20sex%20and%20academic%20level-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>When analyzing distributions of income per sex, we have to take into account the multiple outliers that translate into a severe right skewed distribution, for this reason, data will be analyzed in a log10 scale, that will approximate data to a normal distribution.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>cred.filt <span class="sc">%&gt;%</span> <span class="fu">sex_trans</span>() <span class="sc">%&gt;%</span> <span class="fu">ggplot</span>(<span class="fu">aes</span>(SEXO,<span class="fu">log</span>(INGRESOS_DECLARADOS_TOTA,<span class="at">base=</span><span class="dv">10</span>))) <span class="sc">+</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>         ggdist<span class="sc">::</span><span class="fu">stat_halfeye</span>(<span class="at">alpha=</span><span class="fl">0.5</span>,<span class="at">justification=</span><span class="sc">-</span><span class="fl">0.04</span>) <span class="sc">+</span> </span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>(<span class="at">width=</span><span class="fl">0.1</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">alpha=</span><span class="fl">0.2</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">outlier.color =</span> <span class="st">'red'</span>) <span class="sc">+</span> </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fu">c</span>(<span class="fl">6.1</span>,<span class="fl">6.4</span>),</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>             <span class="at">linetype=</span><span class="st">"dashed"</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>             <span class="at">alpha=</span><span class="fl">0.3</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>             <span class="at">color=</span><span class="st">'red'</span>) <span class="sc">+</span> </span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>(<span class="at">base_size =</span> <span class="dv">15</span>) <span class="sc">+</span> </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>))) <span class="sc">+</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">'Distribution of income per sex'</span>,</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">x=</span><span class="st">'Gender'</span>,</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">y=</span><span class="st">'Log10(Income)'</span>) <span class="sc">+</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">text=</span> <span class="fu">element_text</span>(<span class="at">family=</span><span class="st">'Thin 100'</span>),</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>),</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">32</span>,</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">face=</span><span class="st">'bold'</span>),</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">22</span>),</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.title =</span> <span class="fu">element_blank</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/distribution%20of%20income%20per%20sex-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>75% of the customers here registered incomes under ~ COP $ 10 millions, while the most common wages range from COP $1.2M to 2.5M for both genders. There are also some extraordinary income figures over COP $ 100M.</p>
+<p>According to the Chi-square test, there seems to be a significant dependence ((alpha) = 0.05) between the social class and the academic level. Which indicates that education has a relevant impact on the economic status of a person. Note that <em>p-value</em> was calculated using montecarlo simulations without a prior normal distribution assumption (<a href="https://stackoverflow.com/questions/52068531/how-work-the-p-value-simulation-in-the-chisq-test-and-fisher-test">see the repository for more info</a>).</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>cont_table<span class="ot">&lt;-</span><span class="fu">table</span>(cred.filt<span class="sc">$</span>ESTRATO,cred.filt<span class="sc">$</span>NIVEL_ESTUDIOS)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>cont_matrix <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(cont_table),</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                      <span class="at">nrow =</span> <span class="dv">7</span>,<span class="at">byrow =</span>F,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                      <span class="at">dimnames =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="st">"0"</span>,<span class="st">"1"</span>,<span class="st">"2"</span>,<span class="st">"3"</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>                                        <span class="st">"4"</span>,<span class="st">"5"</span>,<span class="st">"6"</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>                                      <span class="fu">c</span>(<span class="fu">levels</span>(</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>                                        <span class="fu">as.factor</span>(</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>                                          cred.filt<span class="sc">$</span>NIVEL_ESTUDIOS))</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>                                        )</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>                                      )</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>                      )</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>chisq<span class="ot">&lt;-</span>  <span class="fu">chisq.test</span>(cont_matrix,<span class="at">simulate.p.value =</span> T,<span class="at">B=</span><span class="dv">10000</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>chisq</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Pearson's Chi-squared test with simulated p-value (based on 10000
+    replicates)
+
+data:  cont_matrix
+X-squared = 32535, df = NA, p-value = 9.999e-05</code></pre>
+</div>
+</div>
+<p>The graph below shows the proportion of men and women in every academic level based on the total amount of customers by gender. Additionally, a proportion test were carried out for each level of education, where significant differences (<strong><em>p</em></strong> <strong>&lt; 0.05</strong>) between the proportion of men an women represented in all groups except for unfinished bachelor and post-graduate levels.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ed.by.sex<span class="ot">&lt;-</span> cred.filt <span class="sc">%&gt;%</span> <span class="fu">sex_trans</span>()<span class="sc">%&gt;%</span> </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(SEXO,NIVEL_ESTUDIOS) <span class="sc">%&gt;%</span> <span class="fu">summarise</span>(<span class="at">total=</span><span class="fu">n</span>()) <span class="sc">%&gt;%</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">tot_sex=</span><span class="fu">sum</span>(total),<span class="at">perc=</span>total<span class="sc">/</span>tot_sex) </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(ed.by.sex,<span class="fu">aes</span>(<span class="fu">factor</span>(NIVEL_ESTUDIOS,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>                    <span class="at">levels=</span><span class="fu">c</span>(<span class="st">'BAS'</span>,<span class="st">'MED'</span>,<span class="st">'TEC'</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>                             <span class="st">'PRF'</span>,<span class="st">'NOG'</span>,<span class="st">'UNV'</span>,</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>                             <span class="st">'POS'</span>,<span class="st">'DOC'</span>)),perc,<span class="at">fill=</span>SEXO)) <span class="sc">+</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">position =</span> <span class="st">'dodge'</span>,<span class="at">width=</span><span class="fl">0.6</span>) <span class="sc">+</span>  </span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"#2B3D5E"</span>,<span class="st">"#D2DFF7"</span>)) <span class="sc">+</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>(<span class="at">base_size =</span> <span class="dv">15</span>) <span class="sc">+</span> </span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>))) <span class="sc">+</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">'Proportion to the total number of customers by gender'</span>,</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">x=</span><span class="st">'Education level'</span>,</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>       <span class="at">y=</span><span class="st">'Proportion'</span>,</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>       <span class="at">color=</span><span class="st">'Gender'</span>) <span class="sc">+</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">text=</span> <span class="fu">element_text</span>(<span class="at">family=</span><span class="st">'Thin 100'</span>),</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.title.x =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">22</span>),</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>),</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">32</span>,</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">face=</span><span class="st">'bold'</span>),</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/prop%20test%20for%20education%20level-1.png" class="img-fluid" width="672"></p>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">#find significant differences between proportions</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>total_sex <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">50177</span>,<span class="dv">31359</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>ed_level <span class="ot">&lt;-</span> <span class="fu">table</span>(cred.filt<span class="sc">$</span>SEXO,cred.filt<span class="sc">$</span>NIVEL_ESTUDIOS)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>ed_lev_list <span class="ot">&lt;-</span><span class="fu">list</span>()</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>test <span class="ot">&lt;-</span><span class="fu">list</span>()</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>df_prop <span class="ot">&lt;-</span> <span class="fu">data.frame</span>()</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>col.names<span class="ot">&lt;-</span><span class="fu">levels</span>(<span class="fu">as.factor</span>(cred.filt<span class="sc">$</span>NIVEL_ESTUDIOS))</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(ed_level)) {</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  ed_lev_list[[i]]<span class="ot">&lt;-</span>ed_level[,i]</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  test[[i]] <span class="ot">&lt;-</span><span class="fu">prop.test</span>(<span class="fu">c</span>(ed_lev_list[[i]][<span class="dv">1</span>],</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>                          ed_lev_list[[i]][<span class="dv">2</span>]),</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>                        total_sex)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  prop_test_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">level=</span>col.names[i],</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>                             <span class="at">p_value=</span>test[[i]]<span class="sc">$</span>p.value)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  df_prop <span class="ot">&lt;-</span> <span class="fu">rbind</span>(df_prop,prop_test_df)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>df_prop</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>  level       p_value
+1   BAS  1.303930e-70
+2   DOC  1.563480e-08
+3   MED  0.000000e+00
+4   NOG  5.253123e-01
+5   POS  1.560042e-01
+6   PRF  3.422748e-05
+7   TEC  7.407759e-37
+8   UNV 1.452872e-175</code></pre>
+</div>
+</div>
+<p>In order to compare the average income between genders, we have to address the lack of normality and homogenity of variance in the original data. The graph below shows the spread of income for men a women , a severely right skewed distribution is observed with multiple outliers.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>cred.filt <span class="sc">%&gt;%</span> <span class="fu">sex_trans</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y=</span>INGRESOS_DECLARADOS_TOTA,<span class="at">col=</span>SEXO)) <span class="sc">+</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span>  </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(<span class="at">values =</span> <span class="fu">c</span>(<span class="st">"#2B3D5E"</span>,<span class="st">"#D2DFF7"</span>)) <span class="sc">+</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_classic</span>(<span class="at">base_size =</span> <span class="dv">15</span>) <span class="sc">+</span> </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">expand =</span> <span class="fu">expansion</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>))) <span class="sc">+</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">'Income distribution by sex'</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">x=</span><span class="st">'Sex'</span>,</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">y=</span><span class="st">'Income'</span>,</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">color=</span><span class="st">'Gender'</span>) <span class="sc">+</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">text=</span> <span class="fu">element_text</span>(<span class="at">family=</span><span class="st">'Thin 100'</span>),</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.title.x =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">22</span>),</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>),</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">32</span>,</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">face=</span><span class="st">'bold'</span>),</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/difference%20between%20total%20income%20per%20gender-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>By performing a log10 transformation, we can approximate a normal distribution and homosedasticity in data, which is confirmed in the graphs below.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>log.income <span class="ot">&lt;-</span> cred.filt <span class="sc">%&gt;%</span> </span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">log_income=</span> <span class="fu">log</span>(INGRESOS_DECLARADOS_TOTA,<span class="at">base=</span><span class="dv">10</span>))</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>men_income<span class="ot">&lt;-</span> log.income <span class="sc">%&gt;%</span> <span class="fu">filter</span>(SEXO<span class="sc">==</span><span class="st">'H'</span>) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(log_income)</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>women_income <span class="ot">&lt;-</span> log.income <span class="sc">%&gt;%</span> <span class="fu">filter</span>(SEXO<span class="sc">==</span><span class="st">'M'</span>) <span class="sc">%&gt;%</span> <span class="fu">pull</span>(log_income)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>model_sd<span class="ot">&lt;-</span> <span class="fu">lm</span>(log_income<span class="sc">~</span>SEXO,<span class="at">data =</span> log.income) <span class="co">#adjust a model to verify assumptions </span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow=</span><span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">1</span>))</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(model_sd,<span class="dv">2</span>,<span class="at">cex.lab=</span><span class="fl">1.5</span>,<span class="at">cex.axis=</span><span class="fl">1.2</span>,<span class="at">cex.main=</span><span class="fl">1.7</span>,<span class="at">cex.sub=</span><span class="fl">1.5</span>)</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(model_sd,<span class="dv">3</span>,<span class="at">cex.lab=</span><span class="fl">1.5</span>,<span class="at">cex.axis=</span><span class="fl">1.2</span>,<span class="at">cex.main=</span><span class="fl">1.7</span>,<span class="at">cex.sub=</span><span class="fl">1.5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/income%20comparission%20bewteen%20genders-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Now we can compare the average income using a student t-test. However, it is important to highlight that values compared are log10 transformed data, hence, the mean values we are comparing correspond to the geometric means for both gender.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">t.test</span>(men_income,women_income)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Welch Two Sample t-test
+
+data:  men_income and women_income
+t = 37.6, df = 74267, p-value &lt; 2.2e-16
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+ 0.1369385 0.1520001
+sample estimates:
+mean of x mean of y 
+  6.71820   6.57373 </code></pre>
+</div>
+</div>
+<p>According to the t-test, there is a significant difference between the average income for men an women, with men earning around COP $ 5.1M compared to women with ~ $ 3.7M on average, which suggest an existing salary gap between both genders. However, the reasons for this to happen can be multiple an can’t just be attributed to gender issues or segregation, however, there’s not enough information in the data set to infer about those reasons.</p>
+</section>
+<section id="principal-component-analysis-pca" class="level1">
+<h1>Principal Component Analysis (PCA)</h1>
+<p>To perform a dimensional reduction using PCA, a data cleaning and transformation is needed. First, we will remove categorical variables like sex, housing, academic level and social class. To address missing data and zeros making no sense in multiple columns multiple imputation with stochastic linear regression was performed using mice package to preserve the relationship between variables.</p>
+<p>Since PCA does no rely on the normality assumption from data, we should be able to perform the analysis with the original values. However, it’s a good practice to reduce the weight of outliers, which is why log and sqrt transformation were applied to the variables selected.</p>
+<div class="cell" data-fig.dim="[6,5]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>pca_creds<span class="ot">&lt;-</span> cred.filt <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(<span class="st">'SEXO'</span>,<span class="st">'TIPO_VIVI'</span>,<span class="st">'ESTRATO'</span>))</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>pca_creds[pca_creds<span class="sc">==</span><span class="dv">0</span>] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>pca_creds<span class="ot">&lt;-</span> pca_creds <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">MONTO_TOTAL_OTORGADO=</span><span class="fu">log</span>(MONTO_TOTAL_OTORGADO,<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">INGRESOS_DECLARADOS_TOTA=</span><span class="fu">log</span>(INGRESOS_DECLARADOS_TOTA,<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">EGRESOS_DECLARADOS_TOTAL=</span><span class="fu">log</span>(EGRESOS_DECLARADOS_TOTAL,<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">EDAD=</span><span class="fu">sqrt</span>(EDAD),</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">VALOR_CUOTAS_CARTBANC=</span><span class="fu">log</span>(VALOR_CUOTAS_CARTBANC,<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">SALDO_ACTUAL_SEC_FINANCIERO=</span><span class="fu">log</span>(SALDO_ACTUAL_SEC_FINANCIERO,<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">SALDO_TODOS_SECTORES=</span><span class="fu">log</span>(SALDO_TODOS_SECTORES,<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>         <span class="at">VALOR_CUOTA_TODOS_SECTORES =</span><span class="fu">log</span>(VALOR_CUOTA_TODOS_SECTORES,<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">CUOTA_NUEVO_CREDITO=</span><span class="fu">log</span>(CUOTA_NUEVO_CREDITO,<span class="at">base=</span><span class="dv">10</span>)) </span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="co">#remove  175 outliers left </span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>box <span class="ot">&lt;-</span> <span class="fu">boxplot</span>(pca_creds<span class="sc">$</span>MONTO_TOTAL_OTORGADO)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/PCA%20data%20preparation-1.png" class="img-fluid" width="576"></p>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>outlier <span class="ot">&lt;-</span> <span class="fu">min</span>(box<span class="sc">$</span>out)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>pca_creds <span class="ot">&lt;-</span> pca_creds <span class="sc">%&gt;%</span> <span class="fu">filter</span>(MONTO_TOTAL_OTORGADO <span class="sc">&lt;</span> outlier)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Perform multiple imputation with mice package</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co">#multiple imputation</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>imp <span class="ot">&lt;-</span> <span class="fu">mice</span>(pca_creds, <span class="at">method =</span> <span class="st">"norm.nob"</span>, <span class="at">m =</span> <span class="dv">3</span>) <span class="co"># Impute data</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>data_sto <span class="ot">&lt;-</span> <span class="fu">complete</span>(imp) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>After data preparation, we proceed to perform the PCA:</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>data_sto_pca<span class="ot">&lt;-</span> data_sto <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(NIVEL_ESTUDIOS,MONTO_TOTAL_OTORGADO))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>res.pca <span class="ot">&lt;-</span> <span class="fu">PCA</span>(data_sto_pca,<span class="at">graph =</span> F)  <span class="co">#mean imputation was used to replace NA values</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>eigen_val <span class="ot">&lt;-</span> <span class="fu">get_eigenvalue</span>(res.pca)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">round</span>(eigen_val,<span class="dv">3</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: right;">eigenvalue</th>
+<th style="text-align: right;">variance.percent</th>
+<th style="text-align: right;">cumulative.variance.percent</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Dim.1</td>
+<td style="text-align: right;">4.554</td>
+<td style="text-align: right;">50.599</td>
+<td style="text-align: right;">50.599</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dim.2</td>
+<td style="text-align: right;">1.338</td>
+<td style="text-align: right;">14.865</td>
+<td style="text-align: right;">65.464</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dim.3</td>
+<td style="text-align: right;">1.164</td>
+<td style="text-align: right;">12.936</td>
+<td style="text-align: right;">78.399</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dim.4</td>
+<td style="text-align: right;">0.691</td>
+<td style="text-align: right;">7.676</td>
+<td style="text-align: right;">86.075</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dim.5</td>
+<td style="text-align: right;">0.537</td>
+<td style="text-align: right;">5.970</td>
+<td style="text-align: right;">92.045</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dim.6</td>
+<td style="text-align: right;">0.489</td>
+<td style="text-align: right;">5.429</td>
+<td style="text-align: right;">97.474</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dim.7</td>
+<td style="text-align: right;">0.155</td>
+<td style="text-align: right;">1.723</td>
+<td style="text-align: right;">99.197</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Dim.8</td>
+<td style="text-align: right;">0.058</td>
+<td style="text-align: right;">0.648</td>
+<td style="text-align: right;">99.845</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dim.9</td>
+<td style="text-align: right;">0.014</td>
+<td style="text-align: right;">0.155</td>
+<td style="text-align: right;">100.000</td>
+</tr>
+</tbody>
+</table>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fviz_eig</span>(res.pca,<span class="at">addlabels =</span> T) <span class="sc">+</span> </span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>   <span class="fu">theme</span>(<span class="at">text=</span> <span class="fu">element_text</span>(<span class="at">family=</span><span class="st">'Thin 100'</span>),</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">22</span>),</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>),</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">32</span>,</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">face=</span><span class="st">'bold'</span>),</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.title =</span> <span class="fu">element_blank</span>(),</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size=</span><span class="dv">18</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/PCA%20and%20scree%20plot-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The scree plot shows the eigenvalues in descent order. We can see that 90% of the total information in data is encompassed in the first 5 components.</p>
+</section>
+<section id="biplot-of-the-attributes." class="level1">
+<h1>Biplot of the attributes.</h1>
+<p>We want to check how the variables correlate each other, which is not only useful for PCA but for building the prediction model we will use later on.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>data_cor <span class="ot">&lt;-</span> data_sto <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>NIVEL_ESTUDIOS)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="do">## verify correlations</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>multico<span class="ot">&lt;-</span> <span class="fu">cor</span>(data_cor,<span class="at">method =</span> <span class="st">'pearson'</span>)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggcorrplot</span>(multico, <span class="at">method=</span><span class="st">'square'</span>,<span class="at">type=</span><span class="st">'upper'</span>) <span class="sc">+</span> </span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">18</span>)<span class="sc">+</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">45</span>,</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">vjust=</span><span class="dv">1</span>,</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">hjust=</span><span class="dv">1</span>),</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">axis.title =</span> <span class="fu">element_blank</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/correlation%20matrix%20and%20Biplot-1.png" class="img-fluid" width="672"></p>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">#draw biplot</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="fu">fviz_pca_var</span>(res.pca, <span class="at">col.var =</span><span class="st">"black"</span>,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>             <span class="at">repel =</span> <span class="cn">TRUE</span>) <span class="sc">+</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">18</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/correlation%20matrix%20and%20Biplot-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>All of the variables are positively correlated, which is evidenced in the color of each variable in the correlation matrix. Additionally, here are a couple of main pieces of information that can be extracted from the biplot:</p>
+<ul>
+<li><p>Since all of the variables are placed on the same hemisphere of the two-dimensional plane, it confirms that they´re all positively related as stated before.</p></li>
+<li><p>The variables representing fees paid for banking credits or services along with other sectors as well as incomes and monthly debts are better represented by the two first PC in comparison to variables like age and credit score.</p></li>
+<li><p>The 1st component, which accounts for half of the total variance in data by these previously mentioned variables, which indicates that any outcome like the total amount given to a person in credit will be affected by the</p></li>
+</ul>
+</section>
+<section id="contribution-of-each-variable." class="level1">
+<h1>Contribution of each variable.</h1>
+<p>Loading scores represent the coefficients of the linear combination used to create every PC and define their relationship. We can see that half of the total variance in data is explained by the first component, making it the most relevant, in which income and fees paid for banking credits or services along with other sectors have a stronger impact. This suggests that features related to banking fees and acquisitive capacity have the most impact at influencing the variance in the data set and are very likely to have a strong correlation with the total amount a customer is assigned in credit</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>var <span class="ot">&lt;-</span> <span class="fu">get_pca_var</span>(res.pca)</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>load_scores<span class="ot">&lt;-</span><span class="fu">sweep</span>(res.pca<span class="sc">$</span>var<span class="sc">$</span>coord,<span class="dv">2</span>,<span class="fu">sqrt</span>(res.pca<span class="sc">$</span>eig[<span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(var<span class="sc">$</span>coord),<span class="dv">1</span>]),<span class="at">FUN=</span><span class="st">"/"</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">round</span>(load_scores,<span class="dv">3</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: right;">Dim.1</th>
+<th style="text-align: right;">Dim.2</th>
+<th style="text-align: right;">Dim.3</th>
+<th style="text-align: right;">Dim.4</th>
+<th style="text-align: right;">Dim.5</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">INGRESOS_DECLARADOS_TOTA</td>
+<td style="text-align: right;">0.372</td>
+<td style="text-align: right;">0.359</td>
+<td style="text-align: right;">-0.284</td>
+<td style="text-align: right;">-0.045</td>
+<td style="text-align: right;">0.070</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EGRESOS_DECLARADOS_TOTAL</td>
+<td style="text-align: right;">0.267</td>
+<td style="text-align: right;">0.400</td>
+<td style="text-align: right;">-0.482</td>
+<td style="text-align: right;">0.180</td>
+<td style="text-align: right;">-0.077</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">EDAD</td>
+<td style="text-align: right;">0.183</td>
+<td style="text-align: right;">0.269</td>
+<td style="text-align: right;">0.599</td>
+<td style="text-align: right;">-0.597</td>
+<td style="text-align: right;">-0.001</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SCORE_ACIERTA</td>
+<td style="text-align: right;">0.102</td>
+<td style="text-align: right;">0.461</td>
+<td style="text-align: right;">0.541</td>
+<td style="text-align: right;">0.668</td>
+<td style="text-align: right;">-0.110</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">VALOR_CUOTAS_CARTBANC</td>
+<td style="text-align: right;">0.411</td>
+<td style="text-align: right;">-0.201</td>
+<td style="text-align: right;">0.019</td>
+<td style="text-align: right;">-0.048</td>
+<td style="text-align: right;">-0.514</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SALDO_ACTUAL_SEC_FINANCIERO</td>
+<td style="text-align: right;">0.386</td>
+<td style="text-align: right;">-0.352</td>
+<td style="text-align: right;">0.121</td>
+<td style="text-align: right;">0.196</td>
+<td style="text-align: right;">0.384</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SALDO_TODOS_SECTORES</td>
+<td style="text-align: right;">0.384</td>
+<td style="text-align: right;">-0.365</td>
+<td style="text-align: right;">0.115</td>
+<td style="text-align: right;">0.196</td>
+<td style="text-align: right;">0.368</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">VALOR_CUOTA_TODOS_SECTORES</td>
+<td style="text-align: right;">0.415</td>
+<td style="text-align: right;">-0.189</td>
+<td style="text-align: right;">-0.002</td>
+<td style="text-align: right;">-0.069</td>
+<td style="text-align: right;">-0.505</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CUOTA_NUEVO_CREDITO</td>
+<td style="text-align: right;">0.329</td>
+<td style="text-align: right;">0.305</td>
+<td style="text-align: right;">-0.089</td>
+<td style="text-align: right;">-0.282</td>
+<td style="text-align: right;">0.417</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Additionally, upon observing the Cos2 plot, we can even confirm that, those features have the biggest contributions to the first 2 principal components, that account for ~ 65% of the total variation.</p>
+<div class="cell" data-fig.dim="[7,6]">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">fviz_cos2</span>(res.pca,<span class="at">choice =</span> <span class="st">'var'</span>,<span class="at">axes =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="Credits-Assignation-Analysis_files/figure-html/Cos2%20plot-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>In conclusion, after PCA, we achieved a dimensional reduction by expressing more than 92% of the total variance with just components that encompass the information from the 9 features we had selected at the beginning. We also discovered that features representing banking fees and acquisitive capacity have a major impact in variance of data and may have crucial role at determining the amount that a customer can be assigned in credit .</p>
+<p>Furthermore, we’ll used the reduced information to perform a principal component regression (PCR) to train a Machine Learning model that predicts the amount that will be assigned to a customer. The model will be then compared to other to assess effectiveness.</p>
+</section>
+<section id="predicting-the-amount-of-credit-to-be-assigned" class="level1">
+<h1>Predicting the amount of credit to be assigned</h1>
+<p>In order to predict a feasible amount of credit assigned to a customer based on his banking record and purchasing power, a multiple regression model will be fitted.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">#prepare data</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>data_mult<span class="ot">&lt;-</span>data_sto <span class="sc">%&gt;%</span> <span class="fu">rename</span>(<span class="at">monto_otorgado=</span>MONTO_TOTAL_OTORGADO)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>data_cor <span class="ot">&lt;-</span> data_sto <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>NIVEL_ESTUDIOS)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a><span class="co">#Splitting data set </span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>size <span class="ot">&lt;-</span> <span class="fu">ceiling</span>(<span class="fl">0.8</span><span class="sc">*</span><span class="fu">nrow</span>(data_mult))</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>df.train<span class="ot">&lt;-</span> data_mult[<span class="dv">1</span><span class="sc">:</span>size,]</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>df.test<span class="ot">&lt;-</span> data_mult[(size<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span><span class="fu">nrow</span>(data_mult),]</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a><span class="co"># fit model </span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>model_mul <span class="ot">&lt;-</span> <span class="fu">lm</span>(monto_otorgado<span class="sc">~</span>.,<span class="at">data=</span>df.train)</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model_mul)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = monto_otorgado ~ ., data = df.train)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-2.8945 -0.0736  0.0160  0.0910  6.1405 
+
+Coefficients:
+                              Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)                  9.668e-01  1.171e-02  82.591  &lt; 2e-16 ***
+INGRESOS_DECLARADOS_TOTA     5.327e-02  3.037e-03  17.539  &lt; 2e-16 ***
+EGRESOS_DECLARADOS_TOTAL    -9.996e-03  1.839e-03  -5.435 5.50e-08 ***
+EDAD                         2.083e-02  8.709e-04  23.912  &lt; 2e-16 ***
+NIVEL_ESTUDIOSDOC            5.559e-02  8.149e-03   6.821 9.09e-12 ***
+NIVEL_ESTUDIOSMED            8.896e-02  3.284e-03  27.090  &lt; 2e-16 ***
+NIVEL_ESTUDIOSNOG            2.152e-02  4.253e-03   5.059 4.22e-07 ***
+NIVEL_ESTUDIOSPOS            5.450e-02  3.560e-03  15.309  &lt; 2e-16 ***
+NIVEL_ESTUDIOSPRF            2.979e-02  3.146e-03   9.467  &lt; 2e-16 ***
+NIVEL_ESTUDIOSTEC           -1.018e-03  3.240e-03  -0.314   0.7533    
+NIVEL_ESTUDIOSUNV            1.198e-02  2.882e-03   4.156 3.24e-05 ***
+SCORE_ACIERTA                6.630e-05  7.647e-06   8.670  &lt; 2e-16 ***
+VALOR_CUOTAS_CARTBANC       -4.865e-04  5.131e-03  -0.095   0.9245    
+SALDO_ACTUAL_SEC_FINANCIERO  8.059e-03  3.617e-03   2.228   0.0259 *  
+SALDO_TODOS_SECTORES         1.887e-03  3.791e-03   0.498   0.6187    
+VALOR_CUOTA_TODOS_SECTORES  -4.832e-03  5.631e-03  -0.858   0.3909    
+CUOTA_NUEVO_CREDITO          1.022e+00  1.882e-03 543.029  &lt; 2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.1883 on 65072 degrees of freedom
+Multiple R-squared:  0.9152,    Adjusted R-squared:  0.9152 
+F-statistic: 4.39e+04 on 16 and 65072 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+<p>From the summary statistics, we can already see there are some variables that might not have a significant effect according to the p-value, which is actually surprising since most of them were mentioned to have a high impact at collecting the variance in data according to PCA. Let’s verify some assumptions before going further with the model.</p>
+<p>We had previously verified normality and homogeneity of variance, a log10 and square-root transformation was performed to ensure data met those assumptions. Now we check for no multicolinearity. We can either check the previous correlation plot or calculate the variance inflation factor (VIF) that basically measures the strength of correlation between predictor variables in a model. A variable’s GVIF score over 5 requires further investigation, whereas scores over 10 are strong evidence of multicolinearity.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>data_sto<span class="ot">&lt;-</span> data_sto <span class="sc">%&gt;%</span> <span class="fu">rename</span>(<span class="at">monto_otorgado=</span>MONTO_TOTAL_OTORGADO)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">round</span>(car<span class="sc">::</span><span class="fu">vif</span>(model_mul),<span class="dv">3</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: right;">GVIF</th>
+<th style="text-align: right;">Df</th>
+<th style="text-align: right;">GVIF^(1/(2*Df))</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">INGRESOS_DECLARADOS_TOTA</td>
+<td style="text-align: right;">4.886</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.211</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EGRESOS_DECLARADOS_TOTAL</td>
+<td style="text-align: right;">2.472</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.572</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">EDAD</td>
+<td style="text-align: right;">1.321</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.149</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">NIVEL_ESTUDIOS</td>
+<td style="text-align: right;">1.639</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">1.036</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SCORE_ACIERTA</td>
+<td style="text-align: right;">1.136</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.066</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">VALOR_CUOTAS_CARTBANC</td>
+<td style="text-align: right;">22.682</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4.763</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SALDO_ACTUAL_SEC_FINANCIERO</td>
+<td style="text-align: right;">20.623</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4.541</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SALDO_TODOS_SECTORES</td>
+<td style="text-align: right;">20.479</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4.525</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">VALOR_CUOTA_TODOS_SECTORES</td>
+<td style="text-align: right;">23.805</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4.879</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CUOTA_NUEVO_CREDITO</td>
+<td style="text-align: right;">2.129</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.459</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>After checking up the scores, we can determine that the variance for some coefficients represented by features like “VALOR_CUOTAS_CARTBANC”, “SALDO_TODOS_SECTORES”, and “VALOR_CUOTA_TODOS_SECTORES” are being inflated by the multicolinearity and they should be removed.</p>
+<p>Let’s build the training/testing data sets and build the new model:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Training dataset</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>data_train_filt <span class="ot">&lt;-</span> df.train <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(VALOR_CUOTAS_CARTBANC,</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>                                         SALDO_TODOS_SECTORES,</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>                                         VALOR_CUOTA_TODOS_SECTORES))</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="co">#Testing dataset</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>data_test_filt <span class="ot">&lt;-</span> df.test <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(VALOR_CUOTAS_CARTBANC,</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>                                        SALDO_TODOS_SECTORES,</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>                                        VALOR_CUOTA_TODOS_SECTORES))</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="co">#Fit he new model</span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>model_mul_2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(monto_otorgado<span class="sc">~</span>.,<span class="at">data=</span>data_train_filt)</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model_mul_2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = monto_otorgado ~ ., data = data_train_filt)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-2.8913 -0.0736  0.0159  0.0909  6.1395 
+
+Coefficients:
+                              Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)                  9.645e-01  1.151e-02  83.762  &lt; 2e-16 ***
+INGRESOS_DECLARADOS_TOTA     5.130e-02  2.952e-03  17.377  &lt; 2e-16 ***
+EGRESOS_DECLARADOS_TOTAL    -9.966e-03  1.839e-03  -5.419 6.00e-08 ***
+EDAD                         2.062e-02  8.677e-04  23.765  &lt; 2e-16 ***
+NIVEL_ESTUDIOSDOC            5.576e-02  8.149e-03   6.842 7.85e-12 ***
+NIVEL_ESTUDIOSMED            8.853e-02  3.280e-03  26.989  &lt; 2e-16 ***
+NIVEL_ESTUDIOSNOG            2.137e-02  4.253e-03   5.025 5.05e-07 ***
+NIVEL_ESTUDIOSPOS            5.445e-02  3.559e-03  15.296  &lt; 2e-16 ***
+NIVEL_ESTUDIOSPRF            2.981e-02  3.146e-03   9.475  &lt; 2e-16 ***
+NIVEL_ESTUDIOSTEC           -1.011e-03  3.240e-03  -0.312    0.755    
+NIVEL_ESTUDIOSUNV            1.195e-02  2.882e-03   4.147 3.37e-05 ***
+SCORE_ACIERTA                6.770e-05  7.611e-06   8.895  &lt; 2e-16 ***
+SALDO_ACTUAL_SEC_FINANCIERO  7.888e-03  9.144e-04   8.626  &lt; 2e-16 ***
+CUOTA_NUEVO_CREDITO          1.022e+00  1.880e-03 543.725  &lt; 2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 0.1883 on 65075 degrees of freedom
+Multiple R-squared:  0.9152,    Adjusted R-squared:  0.9152 
+F-statistic: 5.402e+04 on 13 and 65075 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+<p>It looks like all of the remaining variables have a significant effect (<strong>p &gt; 0.05</strong>) on the response variable. However, the r-squared barely changed. At least we have a simpler model where to start.</p>
+<p>Let’s asses the model accuracy by using the Root Mean Squared Error (RMSE)</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co">#validate using RMSE</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>preds <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_mul_2, <span class="at">newdata =</span> data_test_filt )</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>error_train <span class="ot">&lt;-</span> <span class="fu">rmse</span>(<span class="at">actual=</span> data_test_filt<span class="sc">$</span>monto_otorgado, <span class="at">predicted=</span> preds)</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>error_train</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1823554</code></pre>
+</div>
+</div>
+<p>With a 0.182 RMSE, we can say the model can generalize well, taking into account it’s a log10 scale, the prediction might work pretty fine for small credits, however, as it increases the error margin grows bigger. Let’s use some regularization techniques to optimize our model.</p>
+<p>In order to use L1, L2 and Elastic Net regression, we have to build the design matrix.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>X_train<span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(monto_otorgado <span class="sc">~</span>.<span class="sc">-</span><span class="dv">1</span>,<span class="at">data=</span>data_train_filt)</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>X_test <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(monto_otorgado <span class="sc">~</span>.<span class="sc">-</span><span class="dv">1</span>,<span class="at">data=</span>data_test_filt)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>Y_train <span class="ot">&lt;-</span> data_train_filt<span class="sc">$</span>monto_otorgado</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>Y_test <span class="ot">&lt;-</span> data_test_filt<span class="sc">$</span>monto_otorgado</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Now, let’s compare the models fit using the three regularization methods. The best hyperparameter lambda was calculates using the default 10 folds Cross Validation method from the glmnet( ) function.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Regression with 0 &gt; alpha &gt; 1, for lasso = 1, ridge= 0 </span></span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>list.of.fits <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">10</span>) { </span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  fit.name <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">'alpha'</span>,i<span class="sc">/</span><span class="dv">10</span>)</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a>  list.of.fits[[fit.name]] <span class="ot">&lt;-</span> </span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">cv.glmnet</span>(X_train,Y_train, <span class="at">type.measure =</span> <span class="st">'mse'</span>,</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>              <span class="at">alpha=</span>i<span class="sc">/</span><span class="dv">10</span>, <span class="at">family=</span><span class="st">'gaussian'</span>)</span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>result<span class="ot">&lt;-</span> <span class="fu">data.frame</span>()</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">10</span>) { </span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>  fit.name<span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">'alpha'</span>,i<span class="sc">/</span><span class="dv">10</span>)</span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>  predicted_train <span class="ot">&lt;-</span> <span class="fu">predict</span>(list.of.fits[[fit.name]],</span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>                             <span class="at">s=</span>list.of.fits[[fit.name]]<span class="sc">$</span>lambda.min,</span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>                             <span class="at">newx =</span> X_train)</span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>  predicted_test <span class="ot">&lt;-</span> <span class="fu">predict</span>(list.of.fits[[fit.name]],</span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>                       <span class="at">s=</span>list.of.fits[[fit.name]]<span class="sc">$</span>lambda.min,</span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>                       <span class="at">newx =</span> X_test)</span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>  rmse_train<span class="ot">&lt;-</span> <span class="fu">rmse</span>(<span class="at">actual=</span>Y_train,<span class="at">predicted =</span> predicted_train)</span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>  rmse_test<span class="ot">&lt;-</span> <span class="fu">rmse</span>(<span class="at">actual=</span>Y_test,<span class="at">predicted =</span> predicted_test)</span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>  temp<span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">alpha=</span>i<span class="sc">/</span><span class="dv">10</span>, <span class="at">rmse_train=</span>rmse_train, <span class="at">rmse_test=</span>rmse_test, </span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a>                    <span class="at">lambda=</span>list.of.fits[[fit.name]]<span class="sc">$</span>lambda.min, <span class="at">fit.name=</span>fit.name)</span>
+<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a>  result<span class="ot">&lt;-</span> <span class="fu">rbind</span>(result,temp)</span>
+<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(result)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">alpha</th>
+<th style="text-align: right;">rmse_train</th>
+<th style="text-align: right;">rmse_test</th>
+<th style="text-align: right;">lambda</th>
+<th style="text-align: left;">fit.name</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">0.1980914</td>
+<td style="text-align: right;">0.1840516</td>
+<td style="text-align: right;">0.0617007</td>
+<td style="text-align: left;">alpha0</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.1</td>
+<td style="text-align: right;">0.1883290</td>
+<td style="text-align: right;">0.1818558</td>
+<td style="text-align: right;">0.0036138</td>
+<td style="text-align: left;">alpha0.1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.2</td>
+<td style="text-align: right;">0.1883280</td>
+<td style="text-align: right;">0.1817526</td>
+<td style="text-align: right;">0.0034655</td>
+<td style="text-align: left;">alpha0.2</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.3</td>
+<td style="text-align: right;">0.1883273</td>
+<td style="text-align: right;">0.1817191</td>
+<td style="text-align: right;">0.0030541</td>
+<td style="text-align: left;">alpha0.3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.4</td>
+<td style="text-align: right;">0.1883242</td>
+<td style="text-align: right;">0.1817459</td>
+<td style="text-align: right;">0.0025139</td>
+<td style="text-align: left;">alpha0.4</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">0.1883275</td>
+<td style="text-align: right;">0.1817495</td>
+<td style="text-align: right;">0.0022072</td>
+<td style="text-align: left;">alpha0.5</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.6</td>
+<td style="text-align: right;">0.1883253</td>
+<td style="text-align: right;">0.1817885</td>
+<td style="text-align: right;">0.0018393</td>
+<td style="text-align: left;">alpha0.6</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.7</td>
+<td style="text-align: right;">0.1883245</td>
+<td style="text-align: right;">0.1818165</td>
+<td style="text-align: right;">0.0015766</td>
+<td style="text-align: left;">alpha0.7</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">0.8</td>
+<td style="text-align: right;">0.1883243</td>
+<td style="text-align: right;">0.1818384</td>
+<td style="text-align: right;">0.0013795</td>
+<td style="text-align: left;">alpha0.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">0.9</td>
+<td style="text-align: right;">0.1883244</td>
+<td style="text-align: right;">0.1818556</td>
+<td style="text-align: right;">0.0012262</td>
+<td style="text-align: left;">alpha0.9</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">1.0</td>
+<td style="text-align: right;">0.1883246</td>
+<td style="text-align: right;">0.1818696</td>
+<td style="text-align: right;">0.0011036</td>
+<td style="text-align: left;">alpha1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>After the hyperparameter tunning, we can see that an alpha= 0.3 and restriction parameter lambda= 0.0030, were the values that worked the best for the elastic net regression parameters.</p>
+<p>Let´s now suppose that we doubt the homosedasticity in data, so we’ll perform weighted regression by giving a different level of reliability to each point based on their variance. The weights used for the regression model are normally determined base on the inverse of the residuals. We’ll start from the previous model generated using elastic net regression:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co">#weighted linear regression with elasctic net </span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>elast_net<span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_train,Y_train, <span class="at">type.measure =</span> <span class="st">'mse'</span>,</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>                       <span class="at">alpha=</span><span class="fl">0.3</span>, <span class="at">family=</span><span class="st">'gaussian'</span>)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>y_hat<span class="ot">&lt;-</span> <span class="fu">predict</span>(elast_net, <span class="at">s=</span> elast_net<span class="sc">$</span>lambda.min, <span class="at">newx =</span> X_train)</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a><span class="fu">rmse</span>(<span class="at">actual=</span>Y_train,<span class="at">predicted =</span> y_hat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1883273</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>wt1<span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span>y_hat</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a><span class="co">#weighted linear regression with elasctic net and wt = 1/y_hat</span></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>wt_elast_net1 <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_train,Y_train, <span class="at">type.measure =</span> <span class="st">'mse'</span>, <span class="at">weights =</span> wt1,</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>                           <span class="at">alpha=</span><span class="fl">0.3</span>, <span class="at">family=</span><span class="st">'gaussian'</span>) </span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>y_hat<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">predict</span>(wt_elast_net1, <span class="at">s=</span> wt_elast_net1<span class="sc">$</span>lambda<span class="fl">.1</span>se, <span class="at">newx =</span> X_train)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>resid.y_hat<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">abs</span>(Y_train<span class="sc">-</span>y_hat<span class="fl">.2</span>)</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="fu">rmse</span>(<span class="at">actual=</span>Y_train,<span class="at">predicted =</span> y_hat<span class="fl">.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1934459</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>fit2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(resid.y_hat<span class="fl">.2</span><span class="sc">~</span>X_train)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>wt2<span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">/</span>fit2<span class="sc">$</span>fitted.values<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a><span class="co">#weighted linear regression with elastic net and wt = 1/y_hat^2</span></span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>wt_elast_net2 <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_train,Y_train, <span class="at">type.measure =</span> <span class="st">'mse'</span>, <span class="at">weights =</span> wt2,</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>                           <span class="at">alpha=</span><span class="fl">0.3</span>, <span class="at">family=</span><span class="st">'gaussian'</span>) </span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>y_hat<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">predict</span>(wt_elast_net2, <span class="at">s=</span> wt_elast_net2<span class="sc">$</span>lambda.min, <span class="at">newx =</span> X_train)</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a><span class="fu">rmse</span>(<span class="at">actual=</span>Y_train,<span class="at">predicted =</span> y_hat<span class="fl">.3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1896989</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>resid.y_hat<span class="fl">.3</span> <span class="ot">&lt;-</span> <span class="fu">abs</span>(Y_train<span class="sc">-</span>y_hat<span class="fl">.3</span>)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>fit3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(resid.y_hat<span class="fl">.3</span><span class="sc">~</span>X_train)</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>wt3<span class="ot">&lt;-</span> <span class="fu">abs</span>(<span class="dv">1</span><span class="sc">/</span>fit3<span class="sc">$</span>fitted.values)</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a><span class="co">#weighted linear regression with elastic net with abs(sigma)^2 and wt = 1/y_hat</span></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>wt_elast_net3 <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_train,Y_train, <span class="at">type.measure =</span> <span class="st">'mse'</span>, <span class="at">weights =</span> wt3,</span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a>                           <span class="at">alpha=</span><span class="fl">0.3</span>, <span class="at">family=</span><span class="st">'gaussian'</span>) </span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>y_hat<span class="fl">.4</span> <span class="ot">&lt;-</span> <span class="fu">predict</span>(wt_elast_net3, <span class="at">s=</span> wt_elast_net3<span class="sc">$</span>lambda.min, <span class="at">newx =</span> X_train)</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a><span class="fu">rmse</span>(<span class="at">actual=</span>Y_train,<span class="at">predicted =</span> y_hat<span class="fl">.4</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1889853</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>test_pred<span class="ot">&lt;-</span> <span class="fu">predict</span>(wt_elast_net3, <span class="at">s=</span> wt_elast_net3<span class="sc">$</span>lambda.min, <span class="at">newx =</span> X_test)</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a><span class="fu">rmse</span>(<span class="at">actual=</span>Y_test,<span class="at">predicted =</span> test_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.180629</code></pre>
+</div>
+</div>
+<p>After performing a weighted regression, it’s still evident that the model fitted using eslastic net regularization for alpha= 0.3 remains the most accurate based on the RMSE score.</p>
+<p>Now, we’ll try out a Principal Component Regression (PCR) using the dimensionally reduced data set we obtained after performing PCA.</p>
+</section>
+<section id="principal-component-regression" class="level1">
+<h1>Principal Component Regression</h1>
+<p>Since there’ will still be a portion of the variance that will not be covered by the components selected to fit model, we can expect the model to be less accurate. However, bear in mind that some of the variables selected at the beginning were not retired for PCR in comparison to the linear models fitter previously, thus, if we manage to obtain a very similar accuracy compared to the elastic net regularized model, we might even consider using the PCR as the computational memory needed will be significantly less.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="co">#retire the cateogrical variables </span></span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>data_pcr <span class="ot">&lt;-</span> data_mult <span class="sc">%&gt;%</span> <span class="fu">select</span>(<span class="sc">-</span>NIVEL_ESTUDIOS)</span>
+<span id="cb43-3"><a href="#cb43-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-4"><a href="#cb43-4" aria-hidden="true" tabindex="-1"></a><span class="co"># split the dataset </span></span>
+<span id="cb43-5"><a href="#cb43-5" aria-hidden="true" tabindex="-1"></a>df.train.pcr<span class="ot">&lt;-</span> data_pcr[<span class="dv">1</span><span class="sc">:</span>size,]</span>
+<span id="cb43-6"><a href="#cb43-6" aria-hidden="true" tabindex="-1"></a>df.test.pcr<span class="ot">&lt;-</span> data_pcr[(size<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span><span class="fu">nrow</span>(data_mult),]</span>
+<span id="cb43-7"><a href="#cb43-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-8"><a href="#cb43-8" aria-hidden="true" tabindex="-1"></a><span class="co">#we'll fit the model using 5 components, that emcompass ~92% of the total variance in data</span></span>
+<span id="cb43-9"><a href="#cb43-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb43-10"><a href="#cb43-10" aria-hidden="true" tabindex="-1"></a>model_pcr<span class="ot">&lt;-</span> <span class="fu">pcr</span>(monto_otorgado <span class="sc">~</span> ., <span class="at">data=</span>df.train.pcr, <span class="at">center=</span>T, <span class="at">scale=</span>T, <span class="at">ncomp=</span><span class="dv">5</span>)</span>
+<span id="cb43-11"><a href="#cb43-11" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model_pcr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Data:   X dimension: 65089 9 
+    Y dimension: 65089 1
+Fit method: svdpc
+Number of components considered: 5
+TRAINING: % variance explained
+                1 comps  2 comps  3 comps  4 comps  5 comps
+X                 50.86    66.03    78.15    85.87    91.86
+monto_otorgado    47.94    59.42    60.01    64.08    70.29</code></pre>
+</div>
+</div>
+<p>Using cross validation for hyperparameter tunnning will helps us find the best number of component to fit a good model:</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>model_pcr_cv<span class="ot">&lt;-</span> <span class="fu">pcr</span>(monto_otorgado <span class="sc">~</span> ., <span class="at">data=</span>df.train.pcr, <span class="at">center=</span>T, <span class="at">scale=</span>T, <span class="at">validation=</span><span class="st">'CV'</span>)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>model_pcr_mse<span class="ot">&lt;-</span> <span class="fu">MSEP</span>(model_pcr_cv, <span class="at">estimate =</span> <span class="st">'CV'</span>)</span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(model_pcr_mse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 22%">
+<col style="width: 8%">
+<col style="width: 16%">
+<col style="width: 10%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">estimate</th>
+<th style="text-align: left;">response</th>
+<th style="text-align: right;">comps</th>
+<th style="text-align: left;">validation</th>
+<th style="text-align: left;">method</th>
+<th style="text-align: left;">algorithm</th>
+<th style="text-align: right;">value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.4180177</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.2176434</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.1696448</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.1671732</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.1501959</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.1241891</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.0404063</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.0361801</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.0361806</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">monto_otorgado</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">CV</td>
+<td style="text-align: left;">pcr</td>
+<td style="text-align: left;">svd</td>
+<td style="text-align: right;">0.0361819</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>After checking the mean square error (MSE), we can see that after the seventh component, the values remains basically unchanged.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>pcr_pred<span class="ot">&lt;-</span> <span class="fu">predict</span>(model_pcr_cv,df.test.pcr,<span class="at">ncomp =</span> <span class="dv">7</span>)</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>rsme_pcr_test<span class="ot">&lt;-</span> <span class="fu">rmse</span>(<span class="at">actual =</span> df.test.pcr<span class="sc">$</span>monto_otorgado, <span class="at">predicted =</span> <span class="fu">as.numeric</span>(pcr_pred))</span>
+<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>rsme_pcr_test</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1833295</code></pre>
+</div>
+</div>
+</section>
+<section id="conclusion" class="level1">
+<h1>Conclusion</h1>
+<p>After fitting several linear models, using, dimensional reduction and regularization techniques, we have found out that the most accurate model corresponds to the <code>elast_net</code> (alpha=0.3) regression with a RMSE value of 0.1819, which is confirmed to generalize well enough.</p>
+</section>
+<section id="predicting-new-values" class="level1">
+<h1>Predicting new values</h1>
+<p>Let’s write a function that allow us to pre-processing data and use the model to predict the credit assigned to an specific customer.</p>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="do">##function for predictions</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>data.process <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>  df.pred <span class="ot">&lt;-</span> <span class="fu">data.frame</span>()</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>  temp<span class="fl">.2</span> <span class="ot">&lt;-</span> <span class="fu">rbind</span>(df.pred,x) <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">INGRESOS_DECLARADOS_TOTA=</span><span class="fu">log</span>(<span class="fu">as.numeric</span>(x[,<span class="dv">1</span>]),<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb48-6"><a href="#cb48-6" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">EGRESOS_DECLARADOS_TOTAL=</span><span class="fu">log</span>(<span class="fu">as.numeric</span>(x[,<span class="dv">2</span>]),<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb48-7"><a href="#cb48-7" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">EDAD=</span><span class="fu">sqrt</span>(x[,<span class="dv">3</span>]),</span>
+<span id="cb48-8"><a href="#cb48-8" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">NIVEL_ESTUDIOS=</span><span class="fu">factor</span>(x[,<span class="dv">4</span>],<span class="at">levels=</span><span class="fu">c</span>(<span class="st">'BAS'</span>,<span class="st">'MED'</span>,<span class="st">'TEC'</span>,</span>
+<span id="cb48-9"><a href="#cb48-9" aria-hidden="true" tabindex="-1"></a>                                                                             <span class="st">'PRF'</span>,<span class="st">'NOG'</span>,<span class="st">'UNV'</span>,</span>
+<span id="cb48-10"><a href="#cb48-10" aria-hidden="true" tabindex="-1"></a>                                                                             <span class="st">'POS'</span>,<span class="st">'DOC'</span>)),</span>
+<span id="cb48-11"><a href="#cb48-11" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">SCORE_ACIERTA=</span> <span class="fu">log</span>(<span class="fu">as.numeric</span>(x[,<span class="dv">5</span>]),<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb48-12"><a href="#cb48-12" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">SALDO_ACTUAL_SEC_FINANCIERO=</span><span class="fu">log</span>(<span class="fu">as.numeric</span>(x[,<span class="dv">6</span>]),<span class="at">base=</span><span class="dv">10</span>),</span>
+<span id="cb48-13"><a href="#cb48-13" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">CUOTA_NUEVO_CREDITO=</span> <span class="fu">log</span>(<span class="fu">as.numeric</span>(x[,<span class="dv">7</span>]),<span class="at">base=</span><span class="dv">10</span>))</span>
+<span id="cb48-14"><a href="#cb48-14" aria-hidden="true" tabindex="-1"></a>  design.matrix<span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(<span class="sc">~</span>.<span class="sc">-</span><span class="dv">1</span>,<span class="at">data=</span>temp<span class="fl">.2</span>)</span>
+<span id="cb48-15"><a href="#cb48-15" aria-hidden="true" tabindex="-1"></a>  preds<span class="ot">&lt;-</span> <span class="fu">predict</span>(elast_net, <span class="at">s=</span>elast_net<span class="sc">$</span>lambda.min, <span class="at">newx =</span>design.matrix)</span>
+<span id="cb48-16"><a href="#cb48-16" aria-hidden="true" tabindex="-1"></a>  temp<span class="fl">.2</span><span class="sc">$</span>monto.otorgado<span class="ot">=</span> <span class="dv">10</span><span class="sc">^</span>preds</span>
+<span id="cb48-17"><a href="#cb48-17" aria-hidden="true" tabindex="-1"></a>  temp<span class="fl">.2</span></span>
+<span id="cb48-18"><a href="#cb48-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb48-19"><a href="#cb48-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-20"><a href="#cb48-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Feed new data</span></span>
+<span id="cb48-21"><a href="#cb48-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-22"><a href="#cb48-22" aria-hidden="true" tabindex="-1"></a>data<span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">INGRESOS_DECLARADOS_TOTA=</span><span class="dv">6541000</span>,</span>
+<span id="cb48-23"><a href="#cb48-23" aria-hidden="true" tabindex="-1"></a>                <span class="at">EGRESOS_DECLARADOS_TOTAL=</span><span class="dv">850000</span>,</span>
+<span id="cb48-24"><a href="#cb48-24" aria-hidden="true" tabindex="-1"></a>                <span class="at">EDAD=</span><span class="dv">26</span>,</span>
+<span id="cb48-25"><a href="#cb48-25" aria-hidden="true" tabindex="-1"></a>                <span class="at">NIVEL_ESTUDIOS=</span><span class="st">'POS'</span>, </span>
+<span id="cb48-26"><a href="#cb48-26" aria-hidden="true" tabindex="-1"></a>                <span class="at">SCORE_ACIERTA=</span><span class="dv">830</span>,</span>
+<span id="cb48-27"><a href="#cb48-27" aria-hidden="true" tabindex="-1"></a>                <span class="at">SALDO_ACTUAL_SEC_FINANCIERO=</span><span class="dv">71500000</span>, </span>
+<span id="cb48-28"><a href="#cb48-28" aria-hidden="true" tabindex="-1"></a>                <span class="at">CUOTA_NUEVO_CREDITO=</span><span class="dv">1000000</span>)</span>
+<span id="cb48-29"><a href="#cb48-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb48-30"><a href="#cb48-30" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">data.process</span>(data))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 5%">
+<col style="width: 9%">
+<col style="width: 9%">
+<col style="width: 18%">
+<col style="width: 13%">
+<col style="width: 9%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">INGRESOS_DECLARADOS_TOTA</th>
+<th style="text-align: right;">EGRESOS_DECLARADOS_TOTAL</th>
+<th style="text-align: right;">EDAD</th>
+<th style="text-align: left;">NIVEL_ESTUDIOS</th>
+<th style="text-align: right;">SCORE_ACIERTA</th>
+<th style="text-align: right;">SALDO_ACTUAL_SEC_FINANCIERO</th>
+<th style="text-align: right;">CUOTA_NUEVO_CREDITO</th>
+<th style="text-align: right;">monto.otorgado</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">6.815644</td>
+<td style="text-align: right;">5.929419</td>
+<td style="text-align: right;">5.099019</td>
+<td style="text-align: left;">POS</td>
+<td style="text-align: right;">2.919078</td>
+<td style="text-align: right;">7.854306</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">36162421</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
